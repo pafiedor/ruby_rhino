@@ -3,8 +3,10 @@
 # -*- coding: utf-8 -*-
 
 """
-black_rhino is a multi-agent simulator for financial network analysis
-Copyright (C) 2012 Co-Pierre Georg (co-pierre.georg@keble.ox.ac.uk)
+ruby_rhino is a multi-agent simulator for financial network analysis
+Copyright (C) 2016 Paweł Fiedor (pawel@fiedor.eu)
+
+Based on black_rhino available on Github
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,7 +18,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>
 """
 
 # -------------------------------------------------------------------------
@@ -31,7 +33,7 @@ class Transaction(object):
     # VARIABLES
     #
     transactionType = ""
-    # transactionAsset = None
+    transactionAsset = ""  # here we've got the asset kind (MBS, stock, bond etc.)
     transactionFrom = 0
     transactionTo = 0
     transactionValue = 0.0
@@ -54,16 +56,19 @@ class Transaction(object):
     # -------------------------------------------------------------------------
     # this_transaction(transactionType,
     #                  transactionFrom,
+    #                  transactionAsset,
     #                  transactionTo,
     #                  transactionValue,
     #                  transactionInterest,
     #                  transactionMaturity,
     #                  transactionTimeOfDefault)
     # -------------------------------------------------------------------------
-    def this_transaction(self,  transactionType,  transactionFrom,  transactionTo,  transactionValue,  transactionInterest,  transactionMaturity, transactionTimeOfDefault):
+    def this_transaction(self,  transactionType, transactionAsset,  transactionFrom,  transactionTo,  transactionValue,  transactionInterest,  transactionMaturity, transactionTimeOfDefault):
         self.transactionType = transactionType
-        # if transactionType == "I":
-        #    self.transactionAsset = transactionAsset
+        if transactionType == "I":
+            self.transactionAsset = transactionAsset
+        else:
+            self.transactionAsset = ""
         # the convention used is that values are positive
         if transactionValue >= 0:
             self.transactionFrom = transactionFrom
@@ -83,6 +88,7 @@ class Transaction(object):
     # -------------------------------------------------------------------------
     def print_transaction(self):
         print "        <transaction type='" + self.transactionType + "'>"
+        print "            <property type='asset' value='" + self.transactionAsset + "'></property>"
         print "            <property type='from' value='" + str(self.transactionFrom) + "'></property>"
         print "            <property type='to' value='" + str(self.transactionTo) + "'></property>"
         print "            <property type='value' value='" + str(self.transactionValue) + "'></property>"
@@ -97,6 +103,7 @@ class Transaction(object):
     # -------------------------------------------------------------------------
     def write_transaction(self):
         text = "        <transaction type='" + self.transactionType + "'>\n"
+        text += "            <property type='asset' value='" + str(self.transactionAsset) + "'></property>\n"
         text += "            <property type='from' value='" + str(self.transactionFrom) + "'></property>\n"
         text += "            <property type='to' value='" + str(self.transactionTo) + "'></property>\n"
         text += "            <property type='value' value='" + str(self.transactionValue) + "'></property>\n"

@@ -3,8 +3,10 @@
 # -*- coding: utf-8 -*-
 
 """
-black_rhino is a multi-agent simulator for financial network analysis
-Copyright (C) 2012 Co-Pierre Georg (co-pierre.georg@keble.ox.ac.uk)
+ruby_rhino is a multi-agent simulator for financial network analysis
+Copyright (C) 2016 Paweł Fiedor (pawel@fiedor.eu)
+
+Based on black_rhino available on Github
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,7 +18,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>
 """
 
 import logging
@@ -59,6 +61,7 @@ class Environment(BaseConfig):
     # the array of parameters that changes during the simulation
     # parameters = []
     variable_parameters = {}
+    list_of_assets = []
 
     # state _ variables
     #
@@ -320,6 +323,9 @@ class Environment(BaseConfig):
         # loop over all entries in the xml file
         for subelement in element:
             # the first set of parameters will be valid for the whole simulation
+            if (subelement.attrib['type'] == 'assetType'):
+                if str(subelement.attrib['value']) not in self.list_of_assets:
+                        self.list_of_assets.append(str(subelement.attrib['value']))
             if (subelement.attrib['type'] == 'numSweeps'):
                 self.static_parameters["numSweeps"] = int(subelement.attrib['value'])
             if (subelement.attrib['type'] == 'numSimulations'):

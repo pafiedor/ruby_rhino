@@ -3,8 +3,10 @@
 # -*- coding: utf-8 -*-
 
 """
-black_rhino is a multi-agent simulator for financial network analysis
-Copyright (C) 2012 Co-Pierre Georg (co-pierre.georg@keble.ox.ac.uk)
+ruby_rhino is a multi-agent simulator for financial network analysis
+Copyright (C) 2016 Paweł Fiedor (pawel@fiedor.eu)
+
+Based on black_rhino available on Github
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,7 +18,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>
 """
 
 from abm_template.src.basemodel import BaseModel

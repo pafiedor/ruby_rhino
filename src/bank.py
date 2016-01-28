@@ -3,8 +3,10 @@
 # -*- coding: utf-8 -*-
 
 """
-black_rhino is a multi-agent simulator for financial network analysis
-Copyright (C) 2012 Co-Pierre Georg (co-pierre.georg@keble.ox.ac.uk)
+ruby_rhino is a multi-agent simulator for financial network analysis
+Copyright (C) 2016 Paweł Fiedor (pawel@fiedor.eu)
+
+Based on black_rhino available on Github
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,7 +18,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>
 """
 
 import logging
@@ -40,6 +42,7 @@ class Bank(BaseAgent):
     parameters = {}
     state_variables = {}
     accounts = []  # all accounts of a bank
+    list_of_assets = []
 
     parameters["V"] = 0.0  # planned optimal portfolio volume of the bank
     parameters["lamb"] = 0.0  # planned optimal portfolio structure of the bank
@@ -168,6 +171,7 @@ class Bank(BaseAgent):
             self.parameters["rd"] = environment.static_parameters["rd"]
             self.parameters["assetNumber"] = environment.static_parameters["assetNumber"]
             self.parameters["numBanks"] = numBanks
+            self.list_of_assets = environment.list_of_assets
 
             # loop over all entries in the xml file
             for subelement in element:
@@ -335,7 +339,7 @@ class Bank(BaseAgent):
 
         transaction = Transaction()
         value = round(float(self.parameters["r"]*self.get_account("D")), 4)
-        transaction.this_transaction("rD",  self.identifier,  -3,  value,  self.parameters["rb"],  0,  -1)
+        transaction.this_transaction("rD", "", self.identifier,  -3,  value,  self.parameters["rb"],  0,  -1)
         self.accounts.append(transaction)
 
         return -1.0*value
@@ -422,7 +426,7 @@ class Bank(BaseAgent):
             # calculate the actual transferred value
             value = min(maxValue, abs(self.parameters["Lp"]))
             # update the accounts to keep track of the loan
-            self.add_transaction("LC",  -3,  self.identifier,  value,  interest,  maturity,  timeOfDefault)
+            self.add_transaction("LC", "", -3,  self.identifier,  value,  interest,  maturity,  timeOfDefault)
             # and update the liquidity demand
             self.parameters["Lp"] = self.parameters["Lp"] + value
     # ------------------------------------------------------------------------
@@ -508,9 +512,17 @@ class Bank(BaseAgent):
             else:
                 timeOfDefault = -1
 
+            # find the bloody list of investments and choose one randomly
+            list_of_assets_local = []
+            for transaction in self.accounts:
+                if (transaction.transactionType == "I"):
+                    if transaction.transactionAsset not in list_of_assets_local:
+                        list_of_assets_local.append(transaction.transactionAsset)
+            assetType = random.choice(list_of_assets_local)
+
             # and add transaction to the stack
             transaction = Transaction()
-            transaction.this_transaction("I",  self.identifier, -2,  self.parameters["averageTransactionSize"],  self.parameters["rhoReal"],  maturity,  timeOfDefault)
+            transaction.this_transaction("I", assetType,  self.identifier, -2,  self.parameters["averageTransactionSize"],  self.parameters["rhoReal"],  maturity,  timeOfDefault)
             self.accounts.append(transaction)
             del transaction
 
@@ -529,8 +541,16 @@ class Bank(BaseAgent):
             else:
                 timeOfDefault = -1
 
+            # find the bloody list of investments and choose one randomly
+            list_of_assets_local = []
+            for transaction in self.accounts:
+                if (transaction.transactionType == "I"):
+                    if transaction.transactionAsset not in list_of_assets_local:
+                        list_of_assets_local.append(transaction.transactionAsset)
+            assetType = random.choice(list_of_assets_local)
+
             transaction = Transaction()
-            transaction.this_transaction("I",  self.identifier, -2,  transactionVolume,  self.parameters["rhoReal"],  maturity,  timeOfDefault)
+            transaction.this_transaction("I", assetType, self.identifier, -2,  transactionVolume,  self.parameters["rhoReal"],  maturity,  timeOfDefault)
             self.accounts.append(transaction)
             del transaction
     # -------------------------------------------------------------------------
@@ -547,7 +567,7 @@ class Bank(BaseAgent):
         if (self.parameters["Q"] < 0.0):
             logging.info("ERROR: Q negative in transfer_excess_reserves")
         transaction = Transaction()
-        transaction.this_transaction("E",  self.identifier, -3,  transactionVolume,  self.parameters["rb"],  0,  -1)
+        transaction.this_transaction("E", "",  self.identifier, -3,  transactionVolume,  self.parameters["rb"],  0,  -1)
         self.accounts.append(transaction)
         del transaction
     # -------------------------------------------------------------------------
@@ -619,8 +639,11 @@ class Bank(BaseAgent):
                 timeOfDefault = int(round(random.random()*maturity))
             else:
                 timeOfDefault = -1
+
+            assetType = random.choice(self.list_of_assets)
+
             # then, generate the transaction, append it to the accounts, and delete it from memory
-            transaction.this_transaction("I",  self.identifier, -2,  value,  self.parameters["rhoReal"],  maturity, timeOfDefault)
+            transaction.this_transaction("I", assetType, self.identifier, -2,  value,  self.parameters["rhoReal"],  maturity, timeOfDefault)
             self.accounts.append(transaction)
             del transaction
         # store averageTransactionSize
@@ -629,7 +652,7 @@ class Bank(BaseAgent):
         # then, calculate excess reserves
         value = round(float(self.parameters["gamma"]*(1.0-self.parameters["lamb"])*self.parameters["V"]),  4)
         transaction = Transaction()
-        transaction.this_transaction("E",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        transaction.this_transaction("E", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
@@ -637,28 +660,28 @@ class Bank(BaseAgent):
         # (see comments in get_initial_banking_capital() for further details)
         value = round(float(self.get_initial_banking_capital(environment.static_parameters["requiredCapitalRatio"])), 4)
         transaction = Transaction()
-        transaction.this_transaction("BC",  self.identifier,  self.identifier, value,  0.0,  0, -1)
+        transaction.this_transaction("BC", "",  self.identifier,  self.identifier, value,  0.0,  0, -1)
         self.accounts.append(transaction)
         del transaction
 
         # now, transfer deposits from households to banks
         value = round(float(self.parameters["gamma"]*self.parameters["V"]-self.get_account("BC")), 4)
         transaction = Transaction()
-        transaction.this_transaction("D",  -1,  self.identifier,  value,  self.parameters["rd"],  0, -1)
+        transaction.this_transaction("D", "", -1,  self.identifier,  value,  self.parameters["rd"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
         # as well as required deposits to the central bank
         value = round(float(self.parameters["r"]*self.get_account("D")), 4)
         transaction = Transaction()
-        transaction.this_transaction("rD",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        transaction.this_transaction("rD", "", self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
         # finally, determine central bank loans
         value = round(float(self.get_account("I") + self.get_account("E") + self.get_account("rD") - self.get_account("D") - self.get_account("BC")), 4)
         transaction = Transaction()
-        transaction.this_transaction("LC",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        transaction.this_transaction("LC", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
     # -------------------------------------------------------------------------
@@ -706,10 +729,10 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     # add_transaction
     # -------------------------------------------------------------------------
-    def add_transaction(self,  type,  fromID,  toID,  value,  interest,  maturity, timeOfDefault):
+    def add_transaction(self, type, asset,  fromID,  toID,  value,  interest,  maturity, timeOfDefault):
         from src.transaction import Transaction
         transaction = Transaction()
-        transaction.this_transaction(type,  fromID,  toID,  value,  interest,  maturity,  timeOfDefault)
+        transaction.this_transaction(type, asset,  fromID,  toID,  value,  interest,  maturity,  timeOfDefault)
         self.accounts.append(transaction)
         del transaction
     # -------------------------------------------------------------------------
@@ -796,21 +819,22 @@ class Bank(BaseAgent):
             value = 100.0
             maturity = 50.0
             timeOfDefault = -1
-            transaction.this_transaction("I",  self.identifier, -2,  value,  self.parameters["rhoReal"],  maturity, timeOfDefault)
+            assetType = random.choice(self.list_of_assets)
+            transaction.this_transaction("I", assetType,  self.identifier, -2,  value,  self.parameters["rhoReal"],  maturity, timeOfDefault)
             self.accounts.append(transaction)
             del transaction
 
         # excess reserves
         value = 90.0
         transaction = Transaction()
-        transaction.this_transaction("E",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        transaction.this_transaction("E", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
         # required deposits to the central bank
         value = 10.0
         transaction = Transaction()
-        transaction.this_transaction("rD",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        transaction.this_transaction("rD", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
@@ -821,21 +845,21 @@ class Bank(BaseAgent):
         # banking capital
         value = 40.0
         transaction = Transaction()
-        transaction.this_transaction("BC",  self.identifier,  self.identifier, value,  0.0,  0, -1)
+        transaction.this_transaction("BC", "", self.identifier,  self.identifier, value,  0.0,  0, -1)
         self.accounts.append(transaction)
         del transaction
 
         # deposits
         value = 250.0
         transaction = Transaction()
-        transaction.this_transaction("D",  -1,  self.identifier,  value,  self.parameters["rd"],  0, -1)
+        transaction.this_transaction("D", "", -1,  self.identifier,  value,  self.parameters["rd"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
         # central bank loans
         value = 10.0
         transaction = Transaction()
-        transaction.this_transaction("LC",  -3,  self.identifier,  value,  self.parameters["rb"],  0, -1)
+        transaction.this_transaction("LC", "", -3,  self.identifier,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
 
