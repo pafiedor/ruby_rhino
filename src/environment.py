@@ -23,6 +23,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import logging
 import os
+import math
 import networkx as nx
 from abm_template.src.baseconfig import BaseConfig
 
@@ -62,7 +63,7 @@ class Environment(BaseConfig):
     # parameters = []
     variable_parameters = {}
     list_of_assets = []
-
+    correlation_matrix = {}  # correlation_matrix[("bank1","bank2")] = 0.9, max(correlation_matrix, key=correlation_matrix.get)[1], COPY to another one when deleting
     # state _ variables
     #
     # VARIABLES
@@ -104,6 +105,19 @@ class Environment(BaseConfig):
 
     # bookkeeping parameters
     static_parameters["insolvencyHistory"] = []  # [num, time] the number of bank insolvencies and when they occured
+
+    def pearsonr(x, y):
+        # x and y should have same length.
+        n = len(x)
+        mx = sum(x) / float(len(x))
+        my = sum(y) / float(len(y))
+        xm = [xiter-mx for xiter in x]
+        ym = [yiter-my for yiter in y]
+        r_num = sum([a*b for a, b in zip(xm, ym)])
+        r_den = math.sqrt(sum([c*c for c in xm])*sum([d*d for d in ym]))
+        r = r_num / r_den
+        r = max(min(r, 1.0), -1.0)
+        return r
 
     # -------------------------------------------------------------------------
     # print_parameters(self)
