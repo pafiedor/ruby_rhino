@@ -137,7 +137,7 @@ class Network(object):
         timeOfDefault = -1
 
         # we want to loop randomly over all nodes in order to avoid effects originating in the ordering of banks
-        banks = self.contracts.nodes()  # shuffledle cannot deal with the return from a function
+        banks = self.contracts.nodes()  # shuffled cannot deal with the return from a function
         shuffle(banks)
         for bank in banks:  # loop over all banks in the list of shuffled banks
             # print str(bank.identifier) + " " + str(bank.Lp)
@@ -168,6 +168,102 @@ class Network(object):
                         neighbor.parameters["Lp"] -= value
                         bank.parameters["Lp"] += value
     # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # do_interbank_trades_max_corr
+    # -------------------------------------------------------------------------
+    def do_interbank_trades_max_corr(self,  environment):
+        from random import shuffle
+        activeBanks = []
+        neighbors = []
+
+        # we are doing interbank trades, so the interest rate is fixed, as is the timeOfDefault and maturity
+        interest = environment.static_parameters["rb"]
+        maturity = environment.static_parameters["interbankLoanMaturity"]
+        timeOfDefault = -1
+
+        # we go first with the pairs of banks that have the highest correlation of assets
+        banks = self.contracts.nodes()
+        environment.find_bank_asset_correlation()
+        trade_iterator = iter(sorted(environment.correlation_matrix))
+
+        for pair in trade_iterator:
+            bank = pair[0][0]
+            neighbor = pair[0][1]
+            neighbors = self.contracts.neighbors(bank)  # we also want to loop over the neighbors in a random ordering
+            if bank in banks and neighbor in neighbors:
+                # now check if we have a match
+                if (bank.parameters["Lp"] * neighbor.parameters["Lp"] < 0.0) and (bank.parameters["active"] > -1) and (neighbor.parameters["active"] > -1):
+                    # this harmless line implies that there is rationing in the model
+                    value = min(abs(bank.parameters["Lp"]),  abs(neighbor.parameters["Lp"]))
+
+                    if bank.parameters["Lp"] > 0.0:  # bank has excess liquidity
+                        # add transactions
+                        bank.add_transaction("L", "", int(bank.identifier),  int(neighbor.identifier),  value,  interest,  maturity,  timeOfDefault)
+                        neighbor.add_transaction("L", "", int(bank.identifier),  int(neighbor.identifier),  value,  interest,  maturity,  timeOfDefault)
+                        # update network of exposures
+                        self.update_network_of_exposures(bank,  neighbor,  value)
+                        # and change Lp accordingly
+                        bank.parameters["Lp"] -= value
+                        neighbor.parameters["Lp"] += value
+                    if neighbor.parameters["Lp"] > 0.0:  # neighbor has excess liquidity
+                        # add transactions
+                        bank.add_transaction("L", "", int(neighbor.identifier),  int(bank.identifier), value,  interest,  maturity,  timeOfDefault)
+                        neighbor.add_transaction("L", "", int(neighbor.identifier),  int(bank.identifier), value,  interest,  maturity,  timeOfDefault)
+                        # update network of exposures
+                        self.update_network_of_exposures(neighbor,  bank,  value)
+                        # and change Lp accordingly
+                        neighbor.parameters["Lp"] -= value
+                        bank.parameters["Lp"] += value
+# -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # do_interbank_trades_min_corr
+    # -------------------------------------------------------------------------
+    def do_interbank_trades_min_corr(self,  environment):
+        from random import shuffle
+        activeBanks = []
+        neighbors = []
+
+        # we are doing interbank trades, so the interest rate is fixed, as is the timeOfDefault and maturity
+        interest = environment.static_parameters["rb"]
+        maturity = environment.static_parameters["interbankLoanMaturity"]
+        timeOfDefault = -1
+
+        # we go first with the pairs of banks that have the highest correlation of assets
+        banks = self.contracts.nodes()
+        environment.find_bank_asset_correlation()
+        trade_iterator = iter(sorted(environment.correlation_matrix, reverse=True))
+
+        for pair in trade_iterator:
+            bank = pair[0][0]
+            neighbor = pair[0][1]
+            neighbors = self.contracts.neighbors(bank)  # we also want to loop over the neighbors in a random ordering
+            if bank in banks and neighbor in neighbors:
+                # now check if we have a match
+                if (bank.parameters["Lp"] * neighbor.parameters["Lp"] < 0.0) and (bank.parameters["active"] > -1) and (neighbor.parameters["active"] > -1):
+                    # this harmless line implies that there is rationing in the model
+                    value = min(abs(bank.parameters["Lp"]),  abs(neighbor.parameters["Lp"]))
+
+                    if bank.parameters["Lp"] > 0.0:  # bank has excess liquidity
+                        # add transactions
+                        bank.add_transaction("L", "", int(bank.identifier),  int(neighbor.identifier),  value,  interest,  maturity,  timeOfDefault)
+                        neighbor.add_transaction("L", "", int(bank.identifier),  int(neighbor.identifier),  value,  interest,  maturity,  timeOfDefault)
+                        # update network of exposures
+                        self.update_network_of_exposures(bank,  neighbor,  value)
+                        # and change Lp accordingly
+                        bank.parameters["Lp"] -= value
+                        neighbor.parameters["Lp"] += value
+                    if neighbor.parameters["Lp"] > 0.0:  # neighbor has excess liquidity
+                        # add transactions
+                        bank.add_transaction("L", "", int(neighbor.identifier),  int(bank.identifier), value,  interest,  maturity,  timeOfDefault)
+                        neighbor.add_transaction("L", "", int(neighbor.identifier),  int(bank.identifier), value,  interest,  maturity,  timeOfDefault)
+                        # update network of exposures
+                        self.update_network_of_exposures(neighbor,  bank,  value)
+                        # and change Lp accordingly
+                        neighbor.parameters["Lp"] -= value
+                        bank.parameters["Lp"] += value
+# -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # update_network_of_exposures
