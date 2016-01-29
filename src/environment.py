@@ -106,7 +106,7 @@ class Environment(BaseConfig):
     # bookkeeping parameters
     static_parameters["insolvencyHistory"] = []  # [num, time] the number of bank insolvencies and when they occured
 
-    def pearsonr(x, y):
+    def pearsonr(self, x, y):
         # x and y should have same length.
         n = len(x)
         mx = sum(x) / float(len(x))
@@ -118,6 +118,26 @@ class Environment(BaseConfig):
         r = r_num / r_den
         r = max(min(r, 1.0), -1.0)
         return r
+
+    def find_bank_asset_correlation(self):
+        for bank_one in self.banks:
+            for bank_two in self.banks:
+                bank_one_assets = []
+                bank_two_assets = []
+                for asset in self.list_of_assets:
+                    asset_one_temp = 0
+                    asset_two_temp = 0
+                    for transaction_one in bank_one.assets:
+                        if transaction_one.transactionType == "I":
+                            if transaction_one.transactonAsset == asset:
+                                asset_one_temp = asset_one_temp + transaction_one.transactionValue
+                    bank_one_assets.append(asset_one_temp)
+                    for transaction_two in bank_two.assets:
+                        if transaction_two.transactionType == "I":
+                            if transaction_two.transactonAsset == asset:
+                                asset_two_temp = asset_two_temp + transaction_two.transactionValue
+                    bank_two_assets.append(asset_two_temp)
+                self.correlation_matrix[(bank_one, bank_two)] = self.pearsonr(bank_one_assets, bank_two_assets)
 
     # -------------------------------------------------------------------------
     # print_parameters(self)
