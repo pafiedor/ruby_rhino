@@ -102,6 +102,8 @@ class Environment(BaseConfig):
     static_parameters["netStableFundingRatio"] = 0.0  # the fraction of deposits that must have low volatility
     static_parameters["leverageRatio"] = 0.0  # the minimal ratio of banking capital to total assets
     static_parameters["requiredCapitalRatio"] = 0.08  # the required capital ratio for banks
+    # shock parameters
+    static_parameters["AssetShockLoss"] = 0.0  # percentage loss in a shock to a specific asset class
 
     # bookkeeping parameters
     static_parameters["insolvencyHistory"] = []  # [num, time] the number of bank insolvencies and when they occured
@@ -231,6 +233,7 @@ class Environment(BaseConfig):
         text += "  <parameter type='changing' name='netStableFundingRatio' value='" + str(self.static_parameters["netStableFundingRatio"]) + "'></parameter>\n"
         text += "  <parameter type='changing' name='leverageRatio' value='" + str(self.static_parameters["leverageRatio"]) + "'></parameter>\n"
         text += "  <parameter type='changing' name='requiredCapitalRatio' value='" + str(self.static_parameters["requiredCapitalRatio"]) + "'></parameter>\n"
+        text += "  <parameter type='changing' name='AssetShockLoss' value='" + str(self.static_parameters["AssetShockLoss"]) + "'></parameter>\n"
         text += "  <!-- bookkeeping parameters -->\n"
         # find the number of total insolvencies
         numberInsolvencies = 0
@@ -312,6 +315,8 @@ class Environment(BaseConfig):
         self.static_parameters["netStableFundingRatio"] = 0.0  # the fraction of deposits that must have low volatility
         self.static_parameters["leverageRatio"] = 0.0  # the minimal ratio of banking capital to total assets
         self.static_parameters["requiredCapitalRatio"] = 0.08  # the required capital ratio for banks
+        # shock parameters
+        self.static_parameters["AssetShockLoss"] = 0.7  # percentage loss in a shock to a specific asset class
 
         # bookkeeping parameters
         self.static_parameters["insolvencyHistory"] = []  # [num, time] the number of bank insolvencies and when they occured
@@ -488,6 +493,8 @@ class Environment(BaseConfig):
                     self.static_parameters["sifiSurchargeFactor"] = float(self.variable_parameters[parameter]['value'])
                 if parameter == 'requiredCapitalRatio':
                     self.static_parameters["requiredCapitalRatio"] = float(self.variable_parameters[parameter]['value'])
+                if parameter == 'AssetShockLoss':
+                    self.static_parameters["AssetShockLoss"] = float(self.variable_parameters[parameter]['value'])
                 if parameter == 'liquidityCoverageRatio':
                     self.static_parameters["liquidityCoverageRatio"] = float(self.variable_parameters[parameter]['value'])
                 if parameter == 'netStableFundingRatio':
@@ -544,6 +551,7 @@ class Environment(BaseConfig):
         print "interbankLoanMaturity: " + str(self.static_parameters["interbankLoanMaturity"])
         print "firmLoanMaturity: " + str(self.static_parameters["firmLoanMaturity"])
         print "requiredCapitalRatio: " + str(self.static_parameters["requiredCapitalRatio"])
+        print "AssetShockLoss: " + str(self.static_parameters["AssetShockLoss"])
         print "liquidityCoverageRatio: " + str(self.static_parameters["liquidityCoverageRatio"])
         print "netStableFundingRatio: " + str(self.static_parameters["netStableFundingRatio"])
         print "leverageRatio: " + str(self.static_parameters["leverageRatio"])

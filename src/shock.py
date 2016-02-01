@@ -22,6 +22,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>
 """
 
 import logging
+import random
 
 """
   class Shock
@@ -54,6 +55,69 @@ class Shock(object):
             largest_bank = self.find_largest_bank(environment)
             # now send the largest bank into default
             largest_bank.parameters["Lp"] = -10.0
+    # -------------------------------------------------------------------------
+
+    def do_shock_asset(self, environment, time):
+
+        shock_type = int(environment.get_state(time).shockType)
+        logging.info("      shock of type %s executed at time %s", shock_type, time)
+        if shock_type == 3:
+            # random asset
+            # go through all investments and reduce value of the asset
+            shocked_asset = ""
+            shocked_asset = random.choice(environment.list_of_assets)
+            # now reduce the value of all investment of the chosen type
+            for bank in environment.banks:
+                for tranx in bank.accounts:
+                    if tranx.transactionAsset == shocked_asset:
+                        tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
+
+        if shock_type == 4:
+            # biggest asset
+            # go through all investments and reduce value of the asset
+            shocked_asset = ""
+            max_dummie = -1
+            for test_asset in environment.list_of_assets:
+                sum_dummie = 0
+                for bank in environment.banks:
+                    for tranx in bank.accounts:
+                        if tranx.transactionAsset == test_asset:
+                            sum_dummie = sum_dummie + tranx.transactionValue
+                if sum_dummie > max_dummie:
+                    max_dummie = sum_dummie
+                    shocked_asset = test_asset
+
+            # now reduce the value of all investment of the chosen type
+            for bank in environment.banks:
+                for tranx in bank.accounts:
+                    if tranx.transactionAsset == shocked_asset:
+                        tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
+
+        if shock_type == 5:
+            # smallest asset
+            # go through all investments and reduce value of the asset
+            shocked_asset = ""
+            max_dummie = -1
+            for test_asset in environment.list_of_assets:
+                sum_dummie = 0
+                for bank in environment.banks:
+                    for tranx in bank.accounts:
+                        if tranx.transactionAsset == test_asset:
+                            sum_dummie = sum_dummie + tranx.transactionValue
+                if max_dummie == -1:
+                    max_dummie = sum_dummie
+                    shocked_asset = test_asset
+                else:
+                    if sum_dummie > max_dummie:
+                        max_dummie = sum_dummie
+                        shocked_asset = test_asset
+
+            # now reduce the value of all investment of the chosen type
+            for bank in environment.banks:
+                for tranx in bank.accounts:
+                    if tranx.transactionAsset == shocked_asset:
+                        tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
+
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
