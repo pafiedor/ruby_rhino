@@ -62,10 +62,10 @@ class Shock(object):
         shock_type = int(environment.get_state(time).shockType)
         logging.info("      shock of type %s executed at time %s", shock_type, time)
         if shock_type == 3:
-            # random asset
+            # random asset gets devalued
             # go through all investments and reduce value of the asset
             shocked_asset = ""
-            shocked_asset = random.choice(environment.list_of_assets)
+            shocked_asset = random.choice(environment.list_of_assets)  # we chose randomly from a list of assets
             # now reduce the value of all investment of the chosen type
             for bank in environment.banks:
                 for tranx in bank.accounts:
@@ -73,17 +73,17 @@ class Shock(object):
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
 
         if shock_type == 4:
-            # biggest asset
+            # biggest asset gets devalued
             # go through all investments and reduce value of the asset
-            shocked_asset = ""
-            max_dummie = -1
+            shocked_asset = ""  # below we find the asset with maximum holdings overall
+            max_dummie = -1  # all transaction values are positive so this will always be fine
             for test_asset in environment.list_of_assets:
-                sum_dummie = 0
+                sum_dummie = 0  # sum total value of the given asset across all banks and holdings
                 for bank in environment.banks:
                     for tranx in bank.accounts:
                         if tranx.transactionAsset == test_asset:
                             sum_dummie = sum_dummie + tranx.transactionValue
-                if sum_dummie > max_dummie:
+                if sum_dummie > max_dummie:  # if the sum of the asset is bigger than the current max change the max value / asset type
                     max_dummie = sum_dummie
                     shocked_asset = test_asset
 
@@ -94,22 +94,22 @@ class Shock(object):
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
 
         if shock_type == 5:
-            # smallest asset
+            # smallest asset gets devalued
             # go through all investments and reduce value of the asset
             shocked_asset = ""
-            max_dummie = -1
+            min_dummie = -1  # separate starting condition below for -1
             for test_asset in environment.list_of_assets:
-                sum_dummie = 0
+                sum_dummie = 0  # sum total value of the given asset across all banks and holdings
                 for bank in environment.banks:
                     for tranx in bank.accounts:
                         if tranx.transactionAsset == test_asset:
                             sum_dummie = sum_dummie + tranx.transactionValue
-                if max_dummie == -1:
-                    max_dummie = sum_dummie
+                if min_dummie == -1:  # starting condition, if this is the first checked asse we set it to be the minimum for now
+                    min_dummie = sum_dummie
                     shocked_asset = test_asset
                 else:
-                    if sum_dummie > max_dummie:
-                        max_dummie = sum_dummie
+                    if sum_dummie < min_dummie:  # if the sum of the asset is bigger than the current min change the min value / asset type
+                        min_dummie = sum_dummie
                         shocked_asset = test_asset
 
             # now reduce the value of all investment of the chosen type
@@ -117,7 +117,6 @@ class Shock(object):
                 for tranx in bank.accounts:
                     if tranx.transactionAsset == shocked_asset:
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
-
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
