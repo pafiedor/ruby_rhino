@@ -522,7 +522,7 @@ class Bank(BaseAgent):
 
             # and add transaction to the stack
             transaction = Transaction()
-            transaction.this_transaction("I", assetType,  self.identifier, -2,  self.parameters["averageTransactionSize"],  self.parameters["rhoReal"],  maturity,  timeOfDefault)
+            transaction.this_transaction("I", assetType,  self.identifier, -2,  self.parameters["averageTransactionSize"],  environment.list_of_returns[assetType],  maturity,  timeOfDefault)
             self.accounts.append(transaction)
             del transaction
 
@@ -550,7 +550,7 @@ class Bank(BaseAgent):
             assetType = random.choice(list_of_assets_local)
 
             transaction = Transaction()
-            transaction.this_transaction("I", assetType, self.identifier, -2,  transactionVolume,  self.parameters["rhoReal"],  maturity,  timeOfDefault)
+            transaction.this_transaction("I", assetType, self.identifier, -2,  transactionVolume,  environment.list_of_returns[assetType],  maturity,  timeOfDefault)
             self.accounts.append(transaction)
             del transaction
     # -------------------------------------------------------------------------
@@ -581,6 +581,21 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     def calculate_optimal_investment_volume(self,  environment):  # TODO this is not a good name, better would be calculate_optimal_portfolio
         import math
+
+        # with many asset classes we calculate optimal investment volume with average return of the portfolio
+        dummy_average_return = 0
+        dummy_weights = environment.list_of_assets
+        for x in range(0, len(dummy_weights)):
+            dummy_weights[x] = 0
+        for x in range(0, len(dummy_weights)):
+            for tranx in self.accounts:
+                if tranx.assetType == environment.list_of_assets[x]:
+                    dummy_weights[x] = dummy_weights[x] + tranx.transactionValue
+        dummy_sum = sum(dummy_weights)
+        dummy_weights = [a/dummy_sum for a in dummy_weights]
+        for x in range(0, len(dummy_weights)):
+            dummy_average_return = dummy_average_return + dummy_weights[x] * environment.list_of_returns[environment.list_of_assets[x]]
+        self.parameters['rhoReal'] = dummy_average_return
 
         # TODO this is where we could update the p and rho for investments in the real economy
         # TODO in a more elaborate model, financial assets can be treated as another set of risky assets
@@ -643,7 +658,7 @@ class Bank(BaseAgent):
             assetType = random.choice(self.list_of_assets)
 
             # then, generate the transaction, append it to the accounts, and delete it from memory
-            transaction.this_transaction("I", assetType, self.identifier, -2,  value,  self.parameters["rhoReal"],  maturity, timeOfDefault)
+            transaction.this_transaction("I", assetType, self.identifier, -2,  value,  environment.list_of_returns[assetType],  maturity, timeOfDefault)
             self.accounts.append(transaction)
             del transaction
         # store averageTransactionSize
@@ -782,7 +797,7 @@ class Bank(BaseAgent):
     # this routine initializes a bank with a standard balance sheet,
     # which can be used to make the tests more handy
     # -------------------------------------------------------------------------
-    def initialize_standard_bank(self):
+    def initialize_standard_bank(self, environment):
         from src.transaction import Transaction
 
         self.parameters["identifier"] = "0"  # identifier
@@ -820,7 +835,7 @@ class Bank(BaseAgent):
             maturity = 50.0
             timeOfDefault = -1
             assetType = random.choice(self.list_of_assets)
-            transaction.this_transaction("I", assetType,  self.identifier, -2,  value,  self.parameters["rhoReal"],  maturity, timeOfDefault)
+            transaction.this_transaction("I", assetType,  self.identifier, -2,  value,  environment.list_of_returns[assetType],  maturity, timeOfDefault)
             self.accounts.append(transaction)
             del transaction
 

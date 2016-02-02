@@ -63,6 +63,7 @@ class Environment(BaseConfig):
     # parameters = []
     variable_parameters = {}
     list_of_assets = []
+    list_of_returns = {}
     correlation_matrix = {}  # correlation_matrix[("bank1","bank2")] = 0.9, max(correlation_matrix, key=correlation_matrix.get)[1], COPY to another one when deleting
     # state _ variables
     #
@@ -365,6 +366,7 @@ class Environment(BaseConfig):
             if (subelement.attrib['type'] == 'assetType'):
                 if str(subelement.attrib['value']) not in self.list_of_assets:
                         self.list_of_assets.append(str(subelement.attrib['value']))
+                        self.list_of_returns[subelement.attrib['type']] = int(subelement.attrib['return'])
             if (subelement.attrib['type'] == 'numSweeps'):
                 self.static_parameters["numSweeps"] = int(subelement.attrib['value'])
             if (subelement.attrib['type'] == 'numSimulations'):

@@ -2,9 +2,9 @@
     <!-- simulation parameters -->
     <parameter type='numSweeps' value='100'></parameter>
     <parameter type='numSimulations' value='1'></parameter>
-    <parameter type='assetType' value='MBS'></parameter>
-    <parameter type='assetType' value='IRS'></parameter>
-    <parameter type='assetType' value='Bonds'></parameter>
+    <parameter type='assetType' value='MBS' return='0.08'></parameter>
+    <parameter type='assetType' value='IRS' return='0.07'></parameter>
+    <parameter type='assetType' value='Bonds' return='0.05'></parameter>
     <parameter type='numBanks' value='3'></parameter>
     <parameter type='bankDirectory' value='C:\\black_rhino\\src\\banks\\'></parameter>
     <parameter type='graphType' value='gexf'></parameter>
