@@ -369,6 +369,7 @@ class Bank(BaseAgent):
         if ((self.parameters["active"] > -1) and (I > 0.0)):
             if (round(float(BC/I), 4) < required_capital_ratio):
                 self.parameters["active"] = -1
+                self.proliferate()
                 # store in state.numberInsolvencies when we had an insolvency
                 environment.addInsolvencyToHistory(time)
                 if (debug == "info" or debug == "debug"):
@@ -389,6 +390,7 @@ class Bank(BaseAgent):
         if (self.parameters["active"] > -1):
             if (self.parameters["Q"] < 0.0):
                 self.parameters["active"] = -1
+                self.proliferate()
                 # string = "Bank " + self.identifier + " is illiquid" + str(self.Q)
                 # print helper.highlight(string,  "red")
     # -------------------------------------------------------------------------
@@ -554,6 +556,9 @@ class Bank(BaseAgent):
             self.accounts.append(transaction)
             del transaction
     # -------------------------------------------------------------------------
+
+    def transfer_investments_proportionately(self,  environment):
+        pass  # to do as above but not investing randomly but linearly from previous investments
 
     # -------------------------------------------------------------------------
     # transfer_excess_reserves

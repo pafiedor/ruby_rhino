@@ -105,6 +105,7 @@ class Environment(BaseConfig):
     static_parameters["requiredCapitalRatio"] = 0.08  # the required capital ratio for banks
     # shock parameters
     static_parameters["AssetShockLoss"] = 0.0  # percentage loss in a shock to a specific asset class
+    static_parameters["FireSaleProportion"] = 0.0  # percentage loss in a shock to a specific asset class
 
     # bookkeeping parameters
     static_parameters["insolvencyHistory"] = []  # [num, time] the number of bank insolvencies and when they occured
@@ -235,6 +236,7 @@ class Environment(BaseConfig):
         text += "  <parameter type='changing' name='leverageRatio' value='" + str(self.static_parameters["leverageRatio"]) + "'></parameter>\n"
         text += "  <parameter type='changing' name='requiredCapitalRatio' value='" + str(self.static_parameters["requiredCapitalRatio"]) + "'></parameter>\n"
         text += "  <parameter type='changing' name='AssetShockLoss' value='" + str(self.static_parameters["AssetShockLoss"]) + "'></parameter>\n"
+        text += "  <parameter type='changing' name='FireSaleProportion' value='" + str(self.static_parameters["FireSaleProportion"]) + "'></parameter>\n"
         text += "  <!-- bookkeeping parameters -->\n"
         # find the number of total insolvencies
         numberInsolvencies = 0
@@ -318,6 +320,7 @@ class Environment(BaseConfig):
         self.static_parameters["requiredCapitalRatio"] = 0.08  # the required capital ratio for banks
         # shock parameters
         self.static_parameters["AssetShockLoss"] = 0.7  # percentage loss in a shock to a specific asset class
+        self.static_parameters["FireSaleProportion"] = 0.2  # scaling of fire sale losses in value
 
         # bookkeeping parameters
         self.static_parameters["insolvencyHistory"] = []  # [num, time] the number of bank insolvencies and when they occured
@@ -497,6 +500,8 @@ class Environment(BaseConfig):
                     self.static_parameters["requiredCapitalRatio"] = float(self.variable_parameters[parameter]['value'])
                 if parameter == 'AssetShockLoss':
                     self.static_parameters["AssetShockLoss"] = float(self.variable_parameters[parameter]['value'])
+                if parameter == 'FireSaleProportion':
+                    self.static_parameters["FireSaleProportion"] = float(self.variable_parameters[parameter]['value'])
                 if parameter == 'liquidityCoverageRatio':
                     self.static_parameters["liquidityCoverageRatio"] = float(self.variable_parameters[parameter]['value'])
                 if parameter == 'netStableFundingRatio':
@@ -554,6 +559,7 @@ class Environment(BaseConfig):
         print "firmLoanMaturity: " + str(self.static_parameters["firmLoanMaturity"])
         print "requiredCapitalRatio: " + str(self.static_parameters["requiredCapitalRatio"])
         print "AssetShockLoss: " + str(self.static_parameters["AssetShockLoss"])
+        print "FireSaleProportion: " + str(self.static_parameters["FireSaleProportion"])
         print "liquidityCoverageRatio: " + str(self.static_parameters["liquidityCoverageRatio"])
         print "netStableFundingRatio: " + str(self.static_parameters["netStableFundingRatio"])
         print "leverageRatio: " + str(self.static_parameters["leverageRatio"])
