@@ -537,7 +537,7 @@ class Bank(BaseAgent):
             else:
                 timeOfDefault = -1
 
-            # find the bloody list of investments and choose one randomly
+            # find the list of investments and choose one randomly
             list_of_assets_local = []
             for transaction in self.accounts:
                 if (transaction.transactionType == "I"):
@@ -566,7 +566,7 @@ class Bank(BaseAgent):
             else:
                 timeOfDefault = -1
 
-            # find the bloody list of investments and choose one randomly
+            # find the list of investments and choose one randomly
             list_of_assets_local = []
             for transaction in self.accounts:
                 if (transaction.transactionType == "I"):
@@ -581,7 +581,98 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
 
     def transfer_investments_proportionately(self,  environment):
-        pass  # to do as above but not investing randomly but linearly from previous investments
+        # to do as above but not investing randomly but linearly from previous investments
+        # TODO
+        from random import Random
+        from src.transaction import Transaction
+
+        random = Random()
+
+        currentVolume = 0.0
+        optimalVolume = 0.0
+        plannedVolume = 0.0
+        availableVolume = 0.0
+        transactionVolume = 0.0
+        transaction = Transaction()
+
+        # calculate the optimal investment volume and compare to current volume
+        self.calculate_optimal_investment_volume(environment)
+        optimalVolume = round(float(self.parameters["gamma"]*self.parameters["lamb"]*self.parameters["V"]), 4)
+        currentVolume = round(self.get_account("I"), 4)
+        # add new transactions of average size
+        plannedVolume = currentVolume + optimalVolume
+        availableVolume = self.parameters["lamb"]*self.parameters["Q"]  # we can only spend a fraction of the available Q
+        transactionVolume = min(plannedVolume,  availableVolume)
+
+        # find the list of investments and choose one randomly
+        list_of_assets_local = []
+        sum_of_assets_local = []
+        for transaction in self.accounts:
+            if (transaction.transactionType == "I"):
+                if transaction.transactionAsset not in list_of_assets_local:
+                    list_of_assets_local.append(transaction.transactionAsset)
+        for x in range(0, len(list_of_assets_local)):
+            sum_of_assets_local.append(0)
+            for tranx in self.accounts:
+                if (tranx.transactionType == "I"):
+                    if tranx.transactionAsset == list_of_assets_local[x]:
+                        sum_of_assets_local[x] += tranx.transactionValue
+        total = 0
+        cum_weights = []
+        for w in sum_of_assets_local:
+            total += w
+            cum_weights.append(total)
+
+        while ((transactionVolume >= self.parameters["averageTransactionSize"]) and (self.parameters["averageTransactionSize"] > 0.0)):
+
+            transactionVolume = round(transactionVolume - self.parameters["averageTransactionSize"], 5)  # reduce remaining transactionVolume
+            self.parameters["Q"] = self.parameters["Q"] - self.parameters["averageTransactionSize"]  # reduce available liquidity
+
+            # account for different maturities of investments
+            maturity = int(round(random.random()*environment.static_parameters["firmLoanMaturity"], 1))  # this is done very roughly and implies loans are up to 3 years
+
+            # and determine whether the loan will default
+            if (random.random() >= environment.static_parameters["successProbabilityFirms"]):
+                # the loan defaults: determine timeOfDefault
+                timeOfDefault = int(round(random.random()*maturity))
+            else:
+                timeOfDefault = -1
+
+            # find the list of investments and choose one randomly *weighted*
+            x = random() * total
+            i = bisect(cum_weights, x)
+            assetType = list_of_assets_local[i]
+
+            # and add transaction to the stack
+            transaction = Transaction()
+            transaction.this_transaction("I", assetType,  self.identifier, -2,  self.parameters["averageTransactionSize"],  environment.list_of_returns[assetType],  maturity,  timeOfDefault)
+            self.accounts.append(transaction)
+            del transaction
+
+        transactionVolume = round(transactionVolume, 5)
+        # finally, add the remaining transaction to the stack if the transactionVolume was positive in the first place
+        if (transactionVolume > 0.0):
+            self.parameters["Q"] = round(self.parameters["Q"] - transactionVolume, 4)
+
+            # account for different maturities of investments
+            maturity = int(round(random.random()*environment.static_parameters["firmLoanMaturity"], 1))  # this is done very roughly and implies loans are up to 3 years
+
+            # and determine whether the loan will default
+            if (random.random() >= environment.static_parameters["successProbabilityFirms"]):
+                # the loan defaults: determine timeOfDefault
+                timeOfDefault = int(round(random.random()*maturity))
+            else:
+                timeOfDefault = -1
+
+            # find the list of investments and choose one randomly *weighted*
+            x = random() * total
+            i = bisect(cum_weights, x)
+            assetType = list_of_assets_local[i]
+
+            transaction = Transaction()
+            transaction.this_transaction("I", assetType, self.identifier, -2,  transactionVolume,  environment.list_of_returns[assetType],  maturity,  timeOfDefault)
+            self.accounts.append(transaction)
+            del transaction
 
     # -------------------------------------------------------------------------
     # transfer_excess_reserves
