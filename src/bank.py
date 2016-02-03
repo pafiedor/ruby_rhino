@@ -395,6 +395,29 @@ class Bank(BaseAgent):
                 # print helper.highlight(string,  "red")
     # -------------------------------------------------------------------------
 
+    def proliferate(self, environment):
+        # if a bank goes belly up we lower the value of the assets it held at other banks by the share of the total asset value it held times a parameter
+        sums_of_own_assets = []
+        sums_of_total_assets = []
+        for x in range(0, len(environment.list_of_assets)):
+            sums_of_own_assets.append(0)
+            for tranx in self.accounts:
+                if (tranx.transactionAsset == environment.list_of_assets[x]):
+                    sums_of_own_assets[x] += tranx.transactionValue
+        for x in range(0, len(environment.list_of_assets)):
+            sums_of_total_assets.append(0)
+            for bank in environment.banks:
+                for tranx in bank.accounts:
+                    if (tranx.transactionAsset == environment.list_of_assets[x]):
+                        sums_of_total_assets[x] += tranx.transactionValue
+        for x in range(0, len(environment.list_of_assets)):
+            for bank in environment.banks:
+                if bank.parameters["active"] > -1:
+                    for tranx in bank.accounts:
+                        if (tranx.transactionAsset == environment.list_of_assets[x]):
+                            tranx.transactionValue -= tranx.transactionValue * (sums_of_own_assets[x] / sums_of_total_assets[x]) * (1 - environment.static_parameters["FireSaleProportion"])
+    # -------------------------------------------------------------------------
+
     # -------------------------------------------------------------------------
     # calculate_liquidity_demand
     #
