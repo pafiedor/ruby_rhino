@@ -172,6 +172,7 @@ class Bank(BaseAgent):
             self.parameters["assetNumber"] = environment.static_parameters["assetNumber"]
             self.parameters["numBanks"] = numBanks
             self.list_of_assets = environment.list_of_assets
+            list_of_transactions = []
 
             # loop over all entries in the xml file
             for subelement in element:
@@ -195,10 +196,15 @@ class Bank(BaseAgent):
                             self.parameters["rhoFinancial"] = float(value)
                         if (name == 'gammaBank'):
                             self.parameters["gamma"] = float(value)
-
+                if (subelement.attrib['type'] == 'asset'):
+                    name = subelement.attrib['name']
+                    value = subelement.attrib['value']
+                    list_of_transactions.append((name, value))
+            # should we include V for initial allotment when reading investments from files?
             # and finally, calculate optimal investment
             self.calculate_optimal_investment_volume(environment)
             self.initialize_transactions(environment)
+            # self.initialize_transactions_data(environment, list_of_transactions)
         except:
             logging.error("    ERROR: %s could not be parsed",  bankFilename)
     # ------------------------------------------------------------------------
@@ -582,7 +588,6 @@ class Bank(BaseAgent):
 
     def transfer_investments_proportionately(self,  environment):
         # to do as above but not investing randomly but linearly from previous investments
-        # TODO
         from random import Random
         from src.transaction import Transaction
 
@@ -604,9 +609,10 @@ class Bank(BaseAgent):
         availableVolume = self.parameters["lamb"]*self.parameters["Q"]  # we can only spend a fraction of the available Q
         transactionVolume = min(plannedVolume,  availableVolume)
 
-        # find the list of investments and choose one randomly
-        list_of_assets_local = []
-        sum_of_assets_local = []
+        # find the list of investments made by the bank, and their weights, to later get new investments
+        # randomly but weighted by the current portfolio, i.e. a stochastic but linear portfolio extention
+        list_of_assets_local = []  # list of assets held by the bank
+        sum_of_assets_local = []  # total value of given asset
         for transaction in self.accounts:
             if (transaction.transactionType == "I"):
                 if transaction.transactionAsset not in list_of_assets_local:
@@ -617,12 +623,14 @@ class Bank(BaseAgent):
                 if (tranx.transactionType == "I"):
                     if tranx.transactionAsset == list_of_assets_local[x]:
                         sum_of_assets_local[x] += tranx.transactionValue
+        # below we calculate weights for random weighted choice
         total = 0
         cum_weights = []
         for w in sum_of_assets_local:
             total += w
             cum_weights.append(total)
 
+        # add transactions with average size as long as bank has enough transaction volume
         while ((transactionVolume >= self.parameters["averageTransactionSize"]) and (self.parameters["averageTransactionSize"] > 0.0)):
 
             transactionVolume = round(transactionVolume - self.parameters["averageTransactionSize"], 5)  # reduce remaining transactionVolume
@@ -701,6 +709,8 @@ class Bank(BaseAgent):
     def calculate_optimal_investment_volume(self,  environment):  # TODO this is not a good name, better would be calculate_optimal_portfolio
         import math
 
+        # TO_CHANGE: if this is called before investments are put on the ledger, the below will not work
+        # based on the list of transactions!
         # with many asset classes we calculate optimal investment volume with average return of the portfolio
         dummy_average_return = 0
         dummy_weights = environment.list_of_assets
@@ -785,6 +795,90 @@ class Bank(BaseAgent):
 
         # then, calculate excess reserves
         value = round(float(self.parameters["gamma"]*(1.0-self.parameters["lamb"])*self.parameters["V"]),  4)
+        transaction = Transaction()
+        transaction.this_transaction("E", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        self.accounts.append(transaction)
+        del transaction
+
+        # on the liabilities side, banks are endowed with banking capital
+        # (see comments in get_initial_banking_capital() for further details)
+        value = round(float(self.get_initial_banking_capital(environment.static_parameters["requiredCapitalRatio"])), 4)
+        transaction = Transaction()
+        transaction.this_transaction("BC", "",  self.identifier,  self.identifier, value,  0.0,  0, -1)
+        self.accounts.append(transaction)
+        del transaction
+
+        # now, transfer deposits from households to banks
+        value = round(float(self.parameters["gamma"]*self.parameters["V"]-self.get_account("BC")), 4)
+        transaction = Transaction()
+        transaction.this_transaction("D", "", -1,  self.identifier,  value,  self.parameters["rd"],  0, -1)
+        self.accounts.append(transaction)
+        del transaction
+
+        # as well as required deposits to the central bank
+        value = round(float(self.parameters["r"]*self.get_account("D")), 4)
+        transaction = Transaction()
+        transaction.this_transaction("rD", "", self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        self.accounts.append(transaction)
+        del transaction
+
+        # finally, determine central bank loans
+        value = round(float(self.get_account("I") + self.get_account("E") + self.get_account("rD") - self.get_account("D") - self.get_account("BC")), 4)
+        transaction = Transaction()
+        transaction.this_transaction("LC", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
+        self.accounts.append(transaction)
+        del transaction
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # initialize_transactions with data
+    # -------------------------------------------------------------------------
+    def initialize_transactions_data(self, environment, list_of_transactions):
+        from src.transaction import Transaction
+        from random import Random
+        random = Random()
+
+        value = 0.0
+
+        # first, calculate number of transactions for investments
+        # numTransactions = int(round(self.parameters["assetNumber"] / self.parameters["numBanks"]))
+        # if (numTransactions == 0):  # we want some error message if there are two few assets in the economy
+        #    logging.info("  ERROR: number of  assets in the economy has to be at least half the number of banks")
+        # now, calculate value of each transaction and note that the *product* of all individual transactions
+        # is supposed to have precision 4. Hence, each individual transaction should have precision 5
+
+        # value = round(float(self.parameters["gamma"]*self.parameters["lamb"]*self.parameters["V"] / numTransactions), 5)
+        # finally, put them on the transaction stack
+        for i in range(0, len(list_of_transactions)):
+            transaction = Transaction()
+            #
+            # account for different maturities
+            #
+            maturity = int(round(random.random()*environment.static_parameters["firmLoanMaturity"], 1))  # maturity is between 0 and firmLoanMaturity
+            # and determine whether the loan will default
+            if (random.random() >= environment.static_parameters["successProbabilityFirms"]):  # TODO this is superfluous, we could get rid of this doubling
+                # the loan defaults: determine timeOfDefault
+                timeOfDefault = int(round(random.random()*maturity))
+            else:
+                timeOfDefault = -1
+
+            # assetType = random.choice(self.list_of_assets)
+
+            if list_of_transactions[i][0] in environment.list_of_assets:
+                # then, generate the transaction, append it to the accounts, and delete it from memory
+                transaction.this_transaction("I", list_of_transactions[i][0], self.identifier, -2,  list_of_transactions[i][1],  environment.list_of_returns[assetType],  maturity, timeOfDefault)
+                self.accounts.append(transaction)
+                value += list_of_transactions[i][1]
+                del transaction
+            else:
+                logging.error("    ERROR:- %s not on the list of assets.", list_of_transactions[i][0])
+        # store averageTransactionSize
+        value = value / float(len(list_of_transactions))
+        self.parameters["averageTransactionSize"] = value
+
+        # TODO where to get V from initially? in the config?
+        # then, calculate excess reserves
+        value = round(self.get_account("I")-self.parameters["gamma"]*self.parameters["V"],  4)
         transaction = Transaction()
         transaction.this_transaction("E", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
