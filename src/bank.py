@@ -43,6 +43,7 @@ class Bank(BaseAgent):
     state_variables = {}
     accounts = []  # all accounts of a bank
     list_of_assets = []
+    list_of_transactions = []
 
     parameters["V"] = 0.0  # planned optimal portfolio volume of the bank
     parameters["lamb"] = 0.0  # planned optimal portfolio structure of the bank
@@ -172,7 +173,7 @@ class Bank(BaseAgent):
             self.parameters["assetNumber"] = environment.static_parameters["assetNumber"]
             self.parameters["numBanks"] = numBanks
             self.list_of_assets = environment.list_of_assets
-            list_of_transactions = []
+            self.list_of_transactions = []
 
             # loop over all entries in the xml file
             for subelement in element:
@@ -199,12 +200,12 @@ class Bank(BaseAgent):
                 if (subelement.attrib['type'] == 'asset'):
                     name = subelement.attrib['name']
                     value = subelement.attrib['value']
-                    list_of_transactions.append((name, value))
+                    self.list_of_transactions.append((name, value))
             # should we include V for initial allotment when reading investments from files?
             # and finally, calculate optimal investment
-            self.calculate_optimal_investment_volume(environment)
+            self.calculate_optimal_investment_volume(environment, 1)
             self.initialize_transactions(environment)
-            # self.initialize_transactions_data(environment, list_of_transactions)
+            # self.initialize_transactions_data(environment)
         except:
             logging.error("    ERROR: %s could not be parsed",  bankFilename)
     # ------------------------------------------------------------------------
@@ -520,7 +521,7 @@ class Bank(BaseAgent):
         transaction = Transaction()
 
         # calculate the optimal investment volume and compare to current volume
-        self.calculate_optimal_investment_volume(environment)
+        self.calculate_optimal_investment_volume(environment, 2)
         optimalVolume = round(float(self.parameters["gamma"]*self.parameters["lamb"]*self.parameters["V"]), 4)
         currentVolume = round(self.get_account("I"), 4)
         # add new transactions of average size
@@ -601,7 +602,7 @@ class Bank(BaseAgent):
         transaction = Transaction()
 
         # calculate the optimal investment volume and compare to current volume
-        self.calculate_optimal_investment_volume(environment)
+        self.calculate_optimal_investment_volume(environment, 2)
         optimalVolume = round(float(self.parameters["gamma"]*self.parameters["lamb"]*self.parameters["V"]), 4)
         currentVolume = round(self.get_account("I"), 4)
         # add new transactions of average size
@@ -706,25 +707,38 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     # calculate_optimal_investment_volume
     # -------------------------------------------------------------------------
-    def calculate_optimal_investment_volume(self,  environment):  # TODO this is not a good name, better would be calculate_optimal_portfolio
+    def calculate_optimal_investment_volume(self,  environment, version):  # TODO this is not a good name, better would be calculate_optimal_portfolio
         import math
 
-        # TO_CHANGE: if this is called before investments are put on the ledger, the below will not work
-        # based on the list of transactions!
         # with many asset classes we calculate optimal investment volume with average return of the portfolio
-        dummy_average_return = 0
-        dummy_weights = environment.list_of_assets
-        for x in range(0, len(dummy_weights)):
-            dummy_weights[x] = 0
-        for x in range(0, len(dummy_weights)):
-            for tranx in self.accounts:
-                if tranx.assetType == environment.list_of_assets[x]:
-                    dummy_weights[x] = dummy_weights[x] + tranx.transactionValue
-        dummy_sum = sum(dummy_weights)
-        dummy_weights = [a/dummy_sum for a in dummy_weights]
-        for x in range(0, len(dummy_weights)):
-            dummy_average_return = dummy_average_return + dummy_weights[x] * environment.list_of_returns[environment.list_of_assets[x]]
-        self.parameters['rhoReal'] = dummy_average_return
+        if version == 1:
+            dummy_average_return = 0
+            dummy_weights = environment.list_of_assets
+            for x in range(0, len(dummy_weights)):
+                dummy_weights[x] = 0
+            for x in range(0, len(dummy_weights)):
+                for tranx in self.list_of_transactions:
+                    if tranx[0] == environment.list_of_assets[x]:
+                        dummy_weights[x] = dummy_weights[x] + tranx[1]
+            dummy_sum = sum(dummy_weights)
+            dummy_weights = [a/dummy_sum for a in dummy_weights]
+            for x in range(0, len(dummy_weights)):
+                dummy_average_return = dummy_average_return + dummy_weights[x] * environment.list_of_returns[environment.list_of_assets[x]]
+            self.parameters['rhoReal'] = dummy_average_return
+        if version == 2:
+            dummy_average_return = 0
+            dummy_weights = environment.list_of_assets
+            for x in range(0, len(dummy_weights)):
+                dummy_weights[x] = 0
+            for x in range(0, len(dummy_weights)):
+                for tranx in self.accounts:
+                    if tranx.assetType == environment.list_of_assets[x]:
+                        dummy_weights[x] = dummy_weights[x] + tranx.transactionValue
+            dummy_sum = sum(dummy_weights)
+            dummy_weights = [a/dummy_sum for a in dummy_weights]
+            for x in range(0, len(dummy_weights)):
+                dummy_average_return = dummy_average_return + dummy_weights[x] * environment.list_of_returns[environment.list_of_assets[x]]
+            self.parameters['rhoReal'] = dummy_average_return
 
         # TODO this is where we could update the p and rho for investments in the real economy
         # TODO in a more elaborate model, financial assets can be treated as another set of risky assets
@@ -833,7 +847,7 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     # initialize_transactions with data
     # -------------------------------------------------------------------------
-    def initialize_transactions_data(self, environment, list_of_transactions):
+    def initialize_transactions_data(self, environment):
         from src.transaction import Transaction
         from random import Random
         random = Random()
@@ -849,7 +863,7 @@ class Bank(BaseAgent):
 
         # value = round(float(self.parameters["gamma"]*self.parameters["lamb"]*self.parameters["V"] / numTransactions), 5)
         # finally, put them on the transaction stack
-        for i in range(0, len(list_of_transactions)):
+        for i in range(0, len(self.list_of_transactions)):
             transaction = Transaction()
             #
             # account for different maturities
@@ -864,21 +878,21 @@ class Bank(BaseAgent):
 
             # assetType = random.choice(self.list_of_assets)
 
-            if list_of_transactions[i][0] in environment.list_of_assets:
+            if self.list_of_transactions[i][0] in environment.list_of_assets:
                 # then, generate the transaction, append it to the accounts, and delete it from memory
-                transaction.this_transaction("I", list_of_transactions[i][0], self.identifier, -2,  list_of_transactions[i][1],  environment.list_of_returns[assetType],  maturity, timeOfDefault)
+                transaction.this_transaction("I", self.list_of_transactions[i][0], self.identifier, -2,  self.list_of_transactions[i][1],  environment.list_of_returns[assetType],  maturity, timeOfDefault)
                 self.accounts.append(transaction)
-                value += list_of_transactions[i][1]
+                value += self.list_of_transactions[i][1]
                 del transaction
             else:
-                logging.error("    ERROR:- %s not on the list of assets.", list_of_transactions[i][0])
+                logging.error("    ERROR:- %s not on the list of assets.", self.list_of_transactions[i][0])
         # store averageTransactionSize
-        value = value / float(len(list_of_transactions))
+        value = value / float(len(self.list_of_transactions))
         self.parameters["averageTransactionSize"] = value
 
         # TODO where to get V from initially? in the config?
         # then, calculate excess reserves
-        value = round(self.get_account("I")-self.parameters["gamma"]*self.parameters["V"],  4)
+        value = round(-self.get_account("I")+self.parameters["gamma"]*self.parameters["V"],  4)
         transaction = Transaction()
         transaction.this_transaction("E", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
