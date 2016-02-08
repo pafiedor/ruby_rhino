@@ -119,6 +119,13 @@ class Shock(object):
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
     # -------------------------------------------------------------------------
 
+
+    def do_fire_sales():
+        # TO_CHANGE: add secondary losses to the asset shocks as in Vulnerable Banks
+        # TO CHANGE: the mechanics: direct loss * leverage = shortfall >> *assets = asset sales >> * illiquidity (% change per dollar sold) = price impacts of fire sale >> * assets = losses
+        pass
+    # -------------------------------------------------------------------------
+
     # -------------------------------------------------------------------------
     # find_largest_bank()
     # this routine finds the largest bank in terms of interbank exposure

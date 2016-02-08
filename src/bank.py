@@ -404,20 +404,21 @@ class Bank(BaseAgent):
 
     def proliferate(self, environment):
         # if a bank goes belly up we lower the value of the assets it held at other banks by the share of the total asset value it held times a parameter
+        # TO_CHANGE: the below assumes very simple price impact, to rethink this in line with "Vulnerable Banks"
         sums_of_own_assets = []
         sums_of_total_assets = []
-        for x in range(0, len(environment.list_of_assets)):
+        for x in range(0, len(environment.list_of_assets)):  # First, we calculate of sum of assets of the bank that goes inactive
             sums_of_own_assets.append(0)
             for tranx in self.accounts:
                 if (tranx.transactionAsset == environment.list_of_assets[x]):
                     sums_of_own_assets[x] += tranx.transactionValue
-        for x in range(0, len(environment.list_of_assets)):
+        for x in range(0, len(environment.list_of_assets)):  # Second, we calculate the sum of assets in the system
             sums_of_total_assets.append(0)
             for bank in environment.banks:
                 for tranx in bank.accounts:
                     if (tranx.transactionAsset == environment.list_of_assets[x]):
                         sums_of_total_assets[x] += tranx.transactionValue
-        for x in range(0, len(environment.list_of_assets)):
+        for x in range(0, len(environment.list_of_assets)):  # Finally, reduce the value of the assets of other banks appropriately
             for bank in environment.banks:
                 if bank.parameters["active"] > -1:
                     for tranx in bank.accounts:
