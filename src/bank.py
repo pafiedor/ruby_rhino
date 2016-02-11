@@ -63,6 +63,9 @@ class Bank(BaseAgent):
     parameters["Ip"] = 0.0  # the planned optimal investment
     parameters["Ep"] = 0.0  # the planned excess reserves
     parameters["Lp"] = 0.0  # the planned interbank loans; L > 0: excess supply of interbank liquidity
+    parameters["targetLeverage"] = 0.0  #
+    parameters["shockAssetsPreLoss"] = 0.0  #
+    parameters["shockAssetsFireSold"] = 0.0  #
     # keep track whether a bank is active or not. This variable is necessary since it is not good
     # to remove inactive banks from banks[] while looping through them...
     parameters["active"] = 0
@@ -405,6 +408,7 @@ class Bank(BaseAgent):
     def proliferate(self, environment):
         # if a bank goes belly up we lower the value of the assets it held at other banks by the share of the total asset value it held times a parameter
         # TO_CHANGE: the below assumes very simple price impact, to rethink this in line with "Vulnerable Banks"
+        # TO_CHANGE: will the whole balance sheet work? shouldn't we change the banking capital???
         sums_of_own_assets = []
         sums_of_total_assets = []
         for x in range(0, len(environment.list_of_assets)):  # First, we calculate of sum of assets of the bank that goes inactive
@@ -424,6 +428,14 @@ class Bank(BaseAgent):
                     for tranx in bank.accounts:
                         if (tranx.transactionAsset == environment.list_of_assets[x]):
                             tranx.transactionValue -= tranx.transactionValue * (sums_of_own_assets[x] / sums_of_total_assets[x]) * (1 - environment.static_parameters["FireSaleProportion"])
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # find_leverage
+    # -------------------------------------------------------------------------
+    def find_leverage(self):
+        leverage = (self.get_account("LC")+self.get_account("L"))/(self.get_account["BC"])
+        return leverage
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -843,6 +855,8 @@ class Bank(BaseAgent):
         transaction.this_transaction("LC", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
+
+        self.parameters["targetLeverage"] = self.find_leverage()
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -927,6 +941,8 @@ class Bank(BaseAgent):
         transaction.this_transaction("LC", "",  self.identifier,  -3,  value,  self.parameters["rb"],  0, -1)
         self.accounts.append(transaction)
         del transaction
+
+        self.parameters["targetLeverage"] = self.find_leverage()
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -951,7 +967,8 @@ class Bank(BaseAgent):
 
         for transaction in self.accounts:
             if (transaction.transactionType == type):
-                volume = volume + float(transaction.transactionValue)
+                if (transaction.transactionFrom == self.identifier):
+                    volume = volume + float(transaction.transactionValue)
 
         return volume
     # -------------------------------------------------------------------------

@@ -66,11 +66,16 @@ class Shock(object):
             # go through all investments and reduce value of the asset
             shocked_asset = ""
             shocked_asset = random.choice(environment.list_of_assets)  # we chose randomly from a list of assets
+
             # now reduce the value of all investment of the chosen type
             for bank in environment.banks:
+                bank_pre_sell = 0.0
                 for tranx in bank.accounts:
                     if tranx.transactionAsset == shocked_asset:
+                        bank_pre_sell += tranx.transactionValue
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
+                bank.parameters["shockAssetsPreLoss"] = bank_pre_sell
+            self.do_fire_sales(environment, shocked_asset, min_dummie)
 
         if shock_type == 4:
             # biggest asset gets devalued
@@ -89,9 +94,13 @@ class Shock(object):
 
             # now reduce the value of all investment of the chosen type
             for bank in environment.banks:
+                bank_pre_sell = 0.0
                 for tranx in bank.accounts:
                     if tranx.transactionAsset == shocked_asset:
+                        bank_pre_sell += tranx.transactionValue
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
+                bank.parameters["shockAssetsPreLoss"] = bank_pre_sell
+            self.do_fire_sales(environment, shocked_asset, min_dummie)
 
         if shock_type == 5:
             # smallest asset gets devalued
@@ -104,7 +113,7 @@ class Shock(object):
                     for tranx in bank.accounts:
                         if tranx.transactionAsset == test_asset:
                             sum_dummie = sum_dummie + tranx.transactionValue
-                if min_dummie == -1:  # starting condition, if this is the first checked asse we set it to be the minimum for now
+                if min_dummie == -1:  # starting condition, if this is the first checked asset we set it to be the minimum for now
                     min_dummie = sum_dummie
                     shocked_asset = test_asset
                 else:
@@ -114,16 +123,32 @@ class Shock(object):
 
             # now reduce the value of all investment of the chosen type
             for bank in environment.banks:
+                bank_pre_sell = 0.0
                 for tranx in bank.accounts:
                     if tranx.transactionAsset == shocked_asset:
+                        bank_pre_sell += tranx.transactionValue
                         tranx.transactionValue = (1 - environment.static_parameters["AssetShockLoss"]) * tranx.transactionValue
+                bank.parameters["shockAssetsPreLoss"] = bank_pre_sell
+            self.do_fire_sales(environment, shocked_asset)
     # -------------------------------------------------------------------------
 
+    parameters["shockAssetsPreLoss"] = 0.0  #
+    parameters["shockAssetsFireSold"] = 0.0  #
 
-    def do_fire_sales():
-        # TO_CHANGE: add secondary losses to the asset shocks as in Vulnerable Banks
-        # TO CHANGE: the mechanics: direct loss * leverage = shortfall >> *assets = asset sales >> * illiquidity (% change per dollar sold) = price impacts of fire sale >> * assets = losses
-        pass
+    def do_fire_sales(self, environment, shocked_asset, preValue):
+        for bank in environment.banks:
+            leverage = bank.find_leverage()
+            to_sell = (1 - environment.static_parameters["AssetShockLoss"]) * bank.parameters["shockAssetsPreLoss"] * leverage
+            all_investments = self.get_account("I")
+            fire_sold = 0.0
+            for tranx in self.accounts:
+                if tranx.transactionType == "I":
+                    fire_sold += (tranx.transactionValue / all_investments) * to_sell
+                    tranx.transactionValue = tranx.transactionValue - (tranx.transactionValue / all_investments) * to_sell
+            bank.parameters["shockAssetsFireSold"] = fire_sold
+            # what about capital?
+            # price depreciation with the proportions to the wealth of the system
+            # remove loans for the sold amount
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
