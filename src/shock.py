@@ -132,23 +132,30 @@ class Shock(object):
             self.do_fire_sales(environment, shocked_asset)
     # -------------------------------------------------------------------------
 
-    parameters["shockAssetsPreLoss"] = 0.0  #
-    parameters["shockAssetsFireSold"] = 0.0  #
-
     def do_fire_sales(self, environment, shocked_asset, preValue):
+        for asset in environment.list_of_assets:
+            environment.list_of_firesold[asset] = 0
+
         for bank in environment.banks:
             leverage = bank.find_leverage()
             to_sell = (1 - environment.static_parameters["AssetShockLoss"]) * bank.parameters["shockAssetsPreLoss"] * leverage
             all_investments = self.get_account("I")
             fire_sold = 0.0
-            for tranx in self.accounts:
+            for tranx in bank.accounts:
                 if tranx.transactionType == "I":
                     fire_sold += (tranx.transactionValue / all_investments) * to_sell
+                    environment.list_of_firesold[tranx.transactionAsset] += (tranx.transactionValue / all_investments) * to_sell
                     tranx.transactionValue = tranx.transactionValue - (tranx.transactionValue / all_investments) * to_sell
             bank.parameters["shockAssetsFireSold"] = fire_sold
-            # what about capital?
-            # price depreciation with the proportions to the wealth of the system
-            # remove loans for the sold amount
+        # what about capital?
+        # price depreciation with the proportions to the wealth of the system
+        liquidity = 10**-13  # 10 basis points price change per $10 billion of trading imbalances, from Duarte/Eisenbach >> corporate bonds in August 2011
+        # for the above we need real data, for simulation we need to use appropriate scale or change this so it makes sense
+        for bank in environment.banks:
+            for tranx in bank.accounts:
+                if tranx.transactionType == "I":
+                    tranx.transactionValue = tranx.transactionValue - liquidity * environment.list_of_firesold[tranx.transactionAsset]
+        # remove loans for the sold amount
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

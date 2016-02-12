@@ -64,6 +64,7 @@ class Environment(BaseConfig):
     variable_parameters = {}
     list_of_assets = []
     list_of_returns = {}
+    list_of_firesold = {}
     correlation_matrix = {}  # correlation_matrix[("bank1","bank2")] = 0.9, max(correlation_matrix, key=correlation_matrix.get)[1], COPY to another one when deleting
     # state _ variables
     #
@@ -328,6 +329,9 @@ class Environment(BaseConfig):
         environment_filename = environment_directory + identifier + ".xml"
         self.read_environment_file(environment_filename)
         logging.info("  environment file read: %s",  environment_filename)
+
+        for asset in self.list_of_assets:
+            self.list_of_firesold[asset] = 0
 
         # then read in all the banks
         if (self.static_parameters["bankDirectory"] != ""):
